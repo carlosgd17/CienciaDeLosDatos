@@ -1,0 +1,236 @@
+---
+title: "Pronostico de Ventas de Walmart"
+author: "Carlos Garcia Diaz, Leonardo Cortez Gomez"
+date: "2023-08-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Declaracion del problema
+
+Analizar el conjunto de datos de ventas de Walmart para predecir las ventas por departamento para cada una de sus tiendas.
+
+## Llamando bibliotecas
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(caret)
+library(wordspace)
+```
+
+## Importando el conjunto de datos
+
+El conjunto de datos utilizado para este proyecto contiene datos de captacion de información historica, que cubren los detalles de ventas desde 2010-02-05 hasta 2012-11-01.
+
+```{r}
+stores <- read.csv("stores.csv")
+features <- read.csv("features.csv")
+train <- read.csv("train.csv")
+test <- read.csv("test.csv")
+```
+
+## Entender la base de datos
+
+### Conjunto de datos `stores.csv`
+
+Resumen del conjunto de datos `stores.csv`
+
+```{r}
+summary(stores)
+```
+
+Numero de tiendas. Identificamos que hay tres tipos de tiendas: A, B y C.
+
+```{r}
+count(stores, Type, sort = TRUE)
+```
+
+Estructura del conjunto de datos `stores.csv`
+
+```{r}
+str(stores)
+```
+
+Este conjunto de datos contiene el tipo de tienda y su tamaño
+
+### Conjunto de datos `features.csv`
+
+Hay NA's en más de la mitad de los registros de Markdown (del 1 al 5)
+
+```{r}
+summary(features)
+```
+
+Identificamos que la columna Date es de tipo caracter
+
+```{r}
+str(features)
+```
+
+### Conjunto de datos `test.csv`
+
+```{r}
+summary(test)
+```
+
+Identificamos que la columna Date es de tipo caracter
+
+```{r}
+str(test)
+```
+
+### Conjunto de datos `train.csv`
+
+Identificamos que contiene ventas semanales negativas
+
+```{r}
+summary(train)
+```
+
+Identificamos que la columna Date es de tipo caracter
+
+```{r}
+str(train)
+```
+
+## Integracion de los conjuntos de datos
+
+Agragar `stores` a `train` para generar un nuevo conjunto de datos: `bd`
+
+```{r}
+bd <- merge(train, stores, by = "Store")
+```
+
+Agregar `features` a `bd`
+
+```{r}
+bd <- merge(bd, features)
+```
+
+## Limpieza de `bd`
+
+Eliminando columnas
+
+```{r}
+str(bd)
+```
+
+```{r}
+bd <- subset(bd, select = -c (MarkDown1, MarkDown2, MarkDown3, MarkDown4, MarkDown5))
+summary(bd)
+```
+
+Ajustando el formato de fecha
+
+```{r}
+bd$Date <- as.Date(bd$Date, format="%Y-%m-%d")
+str(bd)
+```
+
+Eliminando valores menores que 0 en la columna `Weekly_Sales`
+
+```{r}
+signcount(bd$Weekly_Sales)
+```
+
+```{r}
+bd <- bd[bd$Weekly_Sales > 0, ]
+summary(bd)
+```
+
+Agregando numero el número de la semana, `week_number`, basandonos en la columna `Date`
+
+```{r}
+bd$Week_number <- strftime(bd$Date, format = "%V")
+str(bd)
+```
+
+```{r}
+bd$Week_number <- as.integer(bd$Week_number)
+str(bd)
+```
+
+```{r}
+summary(bd)
+```
+
+Separando año, mes y dia
+
+```{r}
+bd <- bd %>%
+  dplyr::mutate(year = lubridate::year(Date),
+                month = lubridate::month(Date),
+                day = lubridate::day(Date))
+```
+
+## Regresion lineal
+
+Construye la regresion lineal, siendo:
+
+-   Variable dependiente:
+    -   Ventas semanales
+-   Variables independientes:
+    -   Tienda
+    -   Departamento
+    -   Si es dia festivo
+    -   Tipo
+    -   Tamaño
+    -   Temperatura
+    -   Precio de la gasolina
+    -   IPC
+    -   Desempleo
+    -   Número de la semena
+    -   Año
+    -   Mes
+    -   Dia
+
+```{r}
+regresion <- lm (Weekly_Sales ~ Store + Dept + IsHoliday + Type + Size + Temperature + Fuel_Price + CPI + Unemployment + Week_number + year + month + day, data=bd)
+summary (regresion)
+```
+
+## Modelo de predicción
+
+Probando el modelo con datos de prueba para calcular las ventas semanales de dicha tienda:
+
+| Variable independiente | Valor    |
+|------------------------|----------|
+| Tienda                 | 1        |
+| Es dia festivo         | Si       |
+| Departamento           | 1        |
+| Tipo                   | A        |
+| Tamaño                 | 151315   |
+| Número de la semana    | 1        |
+| Temperatura            | 59.17    |
+| Precio de la gasolina  | 3.524    |
+| IPC                    | 214.8372 |
+| Desempleo              | 7.682    |
+| Año                    | 2012     |
+| Month                  | 1        |
+| Dia                    | 1        |
+
+```{r}
+datos_nuevos <- data.frame(Store=1, IsHoliday= TRUE, Dept=1, Type="A", Size= 151315, Week_number =1, Temperature = 59.17, Fuel_Price = 3.524, CPI= 214.8372, Unemployment = 7.682, year =2012, month = 1, day=1)
+predict(regresion,datos_nuevos)
+```
+
+Por lo tanto, bajo dichas circunstancias la tienda vendera **\$14667.94**.
+
+## Validando el modelo
+
+Evaluar la eficiencia del modelo de datos utilizando el conjunto de datos de prueba y, finalmente, calcular la precisión del modelo utilizando una matriz de confusión.
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
