@@ -1,4 +1,6 @@
-Se trabaja con el archivo **Millon.csv**, sin embargo no se sube al repositorio porque pesa 33.5 MB
+# Analisis de un millon de registros
+
+Se trabaja con el archivo **Millon.csv** que contiene datos sobre las calificaciones de alumnos, sin embargo no se sube al repositorio porque pesa 33.5 MB
 
 
 Muestra del documento:
