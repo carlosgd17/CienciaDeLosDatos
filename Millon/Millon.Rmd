@@ -1,8 +1,8 @@
 ---
 title: "Millon de registros"
 author: 
-  - "Carlos Garcia Diaz, 1712253"
-  - "Leonardo Cortez Gomez, "
+  - "Carlos Garcia Diaz"
+  - "Leonardo Cortez Gomez"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---
