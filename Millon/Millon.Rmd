@@ -57,7 +57,6 @@ Se interpreta el *signinificado* de los datos y comprobamos que la columna:
 -   `Semestre`*s cursados* es de tipo entero
 -   `Materias` *que cursa en el semestre actual* es de tipo entero
 
-
 ## 3. Descripcion de los datos
 
 Obtenemos un resumen del conjunto de datos:
@@ -68,19 +67,18 @@ summary(data)
 
 En cuanto a los datos numericos, vemos que:
 
-- Para la columna `Promedio` (de todos los alumnos):
-  - El valor minimo es de 6,0
-  - El valor maximo es de 10.0
-  - El promedio es de 7.99
-- Para la columna `Semestre`:
-  - El valor minimo es de 1
-  - El valor maximo es de 7
-  - El promedio es de 4.003, redondeado a 4
-- Para la columna `Materias`:
-  - El valor minimo es de 2
-  - El valor maximo es de 10
-  - El promedio es de 6
-
+-   Para la columna `Promedio` (de todos los alumnos):
+    -   El valor minimo es de 6,0
+    -   El valor maximo es de 10.0
+    -   El promedio es de 7.99
+-   Para la columna `Semestre`:
+    -   El valor minimo es de 1
+    -   El valor maximo es de 7
+    -   El promedio es de 4.003, redondeado a 4
+-   Para la columna `Materias`:
+    -   El valor minimo es de 2
+    -   El valor maximo es de 10
+    -   El promedio es de 6
 
 ## 4. Visualizando los datos
 
@@ -91,8 +89,6 @@ hist(data$Promedio, xlab = "Promedio", main = "Histograma de Promedio", ylab = "
 ```
 
 Teniendo en cuenta que cada intervalos es de 0.2, podemos observar quue mas de 60000 alumnos tienen un promedio menor o igual a 6.2. Mientras que menos de 40000 alumnos tienen un promedio mayor o igual a 9.8
-
-
 
 ## Including Plots
 
