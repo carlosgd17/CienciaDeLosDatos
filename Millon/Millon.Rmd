@@ -13,14 +13,12 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 ![](image.jpg)
 
-## 1. Importando bibliotecas y el conjunto de datos
+# 1. Importando bibliotecas y el conjunto de datos
 
 Bibliotecas necesarias para la visualizacion de los datos
 
 ```{r}
 library(ggplot2)
-library(gridExtra)
-library(caret)
 ```
 
 Se carga el archivo `Millon.csv`
@@ -29,7 +27,7 @@ Se carga el archivo `Millon.csv`
 data <- read.csv("Millon.csv")
 ```
 
-## 2. Vista pevia de los datos
+# 2. Vista pevia de los datos
 
 Se muestan los primeros 6 resgistros, con lo que podemos ver que el cojunto de datos consta de 5 columnas:
 
@@ -57,13 +55,15 @@ Se interpreta el *signinificado* de los datos y comprobamos que la columna:
 -   `Semestre`*s cursados* es de tipo entero
 -   `Materias` *que cursa en el semestre actual* es de tipo entero
 
-## 3. Descripcion de los datos
+# 3. Descripcion de los datos
 
 Obtenemos un resumen del conjunto de datos:
 
 ```{r}
 summary(data)
 ```
+
+De igual forma confirmamos que no hay datos perdidos (**NA**) en el conjunto de datos.
 
 En cuanto a los datos numericos, vemos que:
 
@@ -80,22 +80,113 @@ En cuanto a los datos numericos, vemos que:
     -   El valor maximo es de 10
     -   El promedio es de 6
 
-## 4. Visualizando los datos
+# 4. Visualizando los datos
 
 Para tener una mejor comprension de los datos, se usan herramientas visuales como graficas
+
+## 4.1 Promedio
 
 ```{r echo=FALSE}
 hist(data$Promedio, xlab = "Promedio", main = "Histograma de Promedio", ylab = "Frecuencia")
 ```
 
-Teniendo en cuenta que cada intervalos es de 0.2, podemos observar quue mas de 60000 alumnos tienen un promedio menor o igual a 6.2. Mientras que menos de 40000 alumnos tienen un promedio mayor o igual a 9.8
+Teniendo en cuenta que cada intervalos es de 0.2, podemos observar quue mas de 60000 alumnos tienen un promedio menor o igual a 6.2. Mientras que menos de 40000 alumnos tienen un promedio mayor o igual a 9.8. Podemos confirmar esto calculando la desviación estándar de dichos datos:
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+sd(data$Promedio)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Este resultado nos indica que, en promedio, los datos están alejados de la media en una valor de 1.15. También lo podemos obersvar con la siguiente gráfica.
+
+```{r echo = FALSE}
+boxplot(data$Promedio, main = "Boxplot de Promedio")
+```
+
+
+
+## 4.2 Semestre
+
+```{r echo = FALSE}
+table <- table(data$Semestre)
+barplot(table, xlab = "Semestre", main = "Histograma de Semestre", ylab = "Frecuencia")
+```
+
+Con esta gráfica observamos que los valores de `Semestre` tienen una distribución normal, lo que indica que en los 7 semestres estudia casi la misma cantidad de alumnos. Podemos confirmar esto calculando la desviación estándar de dichos datos:
+
+```{r}
+sd(data$Semestre)
+```
+
+Este resultado nos indica que, en promedio, los datos están alejados de la media en una valor de 1.99.
+También lo podemos obersvar con la siguiente gráfica.
+
+```{r echo = FALSE}
+boxplot(data$Semestre, main = "Boxplot de Semestre")
+```
+
+## 4.3 Materias
+
+```{r echo = FALSE}
+table <- table(data$Materias)
+barplot(table, xlab = "Numero de Materias", main = "Histograma de Materias", ylab = "Frecuencia")
+```
+
+Asi como en la columna `Semestre`, aquí también podemos observar que el número de estudiantes que cursan de 1 a 10 materias es aproximadamente igual. Podemos confirmar esto calculando la desviación estándar de dichos datos:
+
+```{r}
+sd(data$Materias)
+```
+
+Este resultado nos indica que, en promedio, los datos están alejados de la media en una valor de 2.5.
+
+También lo podemos obersvar con la siguiente gráfica.
+
+```{r echo = FALSE}
+boxplot(data$Materias, main = "Boxplot de Materias")
+```
+
+## 4.4 Numero
+
+En cuanto a los datos de `Numero`, estos no se estudian ya que no son relevantes para el caso de estudio, pues estos son aleatorios.
+
+
+# 5. Relaciones entre las variables
+
+Se analizan las rerlaciones y qué tanto afectan las variables `Semestre` y `Materias` a la variable `Promedio`.
+
+## 5.1 Matriz de correlación
+
+```{r}
+cor(data[,3:5])
+```
+
+Dada la matriz de correlación, vemos que tanto el `Semestre` que cursa un alumno y el número de `Materias` que lleva en dicho semeste no afectan a su promedio pues los valores de correlación son prácticamente nulos.
+
+## 5.2 Diagramas de dispersión
+
+Para apreciar mejor dicha correlación, se presentan las siguientes gráficas junto con su linea de tendencia.
+
+```{r echo = FALSE, eval=FALSE}
+ggplot(data, aes(x=Materias, y=Promedio)) +
+geom_point() +
+geom_smooth(method=lm, se=FALSE, col='cyan', size=2) +
+ggtitle("Correlación de Materias y Promedio")
+```
+
+![](MaVsPr.png)
+
+```{r echo = FALSE, eval=FALSE}
+ggplot(data, aes(x=Semestre, y=Promedio)) +
+geom_point() +
+geom_smooth(method=lm, se=FALSE, col='cyan', size=2) +
+ggtitle("Correlación de Semestre y Promedio")
+```
+
+![](SeVsPr.png)
+
+# 6. Conclusiones
+A partir del análisis tanto gráfico como no gráfico describimos el comportamiento de las variables `Semestre` y `Promedio` y notamos que estas tienen una diespersión uniforme.
+Por otra parte, notamos que los valores de `Semestre` varían en sus extremos (6 y 10), pero en general conserva una distribución normal.
+
+Y por último determinamos la correlación entre las variables para analizar cómo impactaban el valor del `Promedio`, con lo que concluimos que su impacto es mínimo.
+
