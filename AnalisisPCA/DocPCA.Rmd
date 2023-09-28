@@ -1,10 +1,11 @@
 ---
 title: "Analisis PCA"
 author:
-  - "Carlos Garcia Diaz"
-  - "Leonardo Cortez Gomez"
+- Carlos Garcia Diaz
+- Leonardo Cortez Gomez
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -13,13 +14,11 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Declaración del problema
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Descripción del conjunto de datos
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+El conjunto de datos sobre isotopos de carbono es un conjunto de datos multivariados de valor real que describe la criticidad (*K*) de un reactor y la potencia del mismo (*LP*).
 
-```{r cars}
-summary(cars)
-```
+Hay ciento doce columnas. Las primeras 110 se refieren a isotopos de carbono, donde *C* hace referencia al Carbono, el número después de la *C* a la cantidad de protones y neutrones en su núcleo, *U* a que es *inestable*, y *G* a que es emisor de *radiación gamma*. Por último, la columna *K* se refiere a la criticidad del reactor, y la columna *LP* a la potencia de este.
 
 # Análisis
 
@@ -27,32 +26,118 @@ summary(cars)
 
 ```{r}
 library("readxl")
-datos <- read_excel("dataframe_inicial.xlsx")
+library('corrr')
+library("ggcorrplot")
+library("FactoMineR")
+library("factoextra")
 ```
 
+Vista previa del conjunto de datos.
+
+```{r}
+datos <- read_excel("dataframe_inicial.xlsx")
+str(datos)
+```
 
 ## Limpieza de los datos
 
 En esta etapa, debe asegurarse de deshacerse de todas las inconsistencias, como valores faltantes y variables redundantes.
+
+Verificamos si hay valores nulos.
+
 ```{r}
-
+colSums(is.na(datos))
 ```
 
+No hay datos nulos.
 
-## Exploración de los datos
+Por otra parte, previamente se identificaron columnas con valores 0, por lo tanto, se decide no tomarlas en cuenta para el estudio ya que no aportan nada a este.
 
-
-
-## Modelado de los datos
-
-## Análisis de patrones
-
-## Validación del modelo
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+datos = datos[, which(colSums(datos) != 0)]
+str(datos)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Con esto, nos quedan 57 columnas.
+
+## Normalización de los datos
+
+Con el fin de que las variables estén dentro del mismo rango (escala) y contribuyan igualmente al análisis, se someten a un proceso de estandarización.
+
+Primero, se descartan las columnas *K* y *LP* por no ser relevantes.
+
+```{r}
+numerical_data <- datos[,0:55]
+head(numerical_data)
+```
+
+Se estandarizan los datos:
+
+```{r}
+data_normalized <- scale(numerical_data)
+head(data_normalized)
+```
+
+Debido a que ciertas columnas contenían el mismo valor en todos sus registros, el resultado de la estandarización es nulo, por lo tanto.
+A continuación, se identificaron datos nulos en las columnas *C11U*, *C32G*, *C82G*, *C93G* y *C98G*, por lo que no se tomarán en cuenta.
+
+```{r}
+colSums(is.na(data_normalized))
+```
+
+Una vez identificadas dichas columnas, se eliminan del conjunto de datos.
+
+```{r}
+data_normalized = data_normalized[, colSums(is.na(data_normalized)) == 0]
+
+str(data_normalized)
+```
+
+## Computar la matriz de correlación
+
+Ya con los datos limpios y estandarizados, se muestra la matriz de correlación.
+
+```{r}
+corr_matrix <- cor(data_normalized)
+ggcorrplot(corr_matrix) +
+  theme(axis.text.x = element_text(size = 6, angle = 90),
+        axis.text.y = element_text(size = 6))
+```
+
+Correlación positiva o negativa.
+
+## PCA
+
+Se "construyen" nuevas variables a partir de combinaciones lineales o mezclas de las variables iniciales.
+
+```{r}
+datos.pca <- princomp(corr_matrix)
+str(datos.pca)
+```
+
+```{r}
+datos.pca$loadings[, 1:2]
+```
+
+Como se muestra en la siguiente gráfica, el primer componente contiene la máxima información posible de las variables, representándolas en hasta un 62.6%
+
+```{r echo = FALSE}
+fviz_eig(datos.pca, addlabels = TRUE)
+```
+
+De forma geométrica podemos ver que los componentes principales representan las direcciones de los datos que explican la máxima cantidad de varianza. En el caso del primer componente se aprecia que en, la gráfica las *líneas* que representatn a las variables originales tienden a agruparse en el eje *x*, correspondiente a la *dimensión 1*.
+
+```{r echo = FALSE}
+fviz_pca_var(datos.pca, col.var = "blacK")
+```
+
+```{r}
+fviz_cos2(datos.pca, choice = "var", axes = 1:2)
+```
+
+```{r}
+fviz_pca_var(datos.pca, col.var = "cos2",
+            gradient.cols = c("black", "orange", "green"),
+            repel = TRUE)
+```
+
