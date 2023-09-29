@@ -16,9 +16,11 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 ## Descripción del conjunto de datos
 
-El conjunto de datos sobre isotopos de carbono es un conjunto de datos multivariados de valor real que describe la criticidad (*K*) de un reactor y la potencia del mismo (*LP*).
+El conjunto de datos sobre isótopos de carbono es un conjunto de datos multivariados de valor real que describe la criticidad (*K*) de un reactor y la potencia del mismo (*LP*).
 
-Hay ciento doce columnas. Las primeras 110 se refieren a isotopos de carbono, donde *C* hace referencia al Carbono, el número después de la *C* a la cantidad de protones y neutrones en su núcleo, *U* a que es *inestable*, y *G* a que es emisor de *radiación gamma*. Por último, la columna *K* se refiere a la criticidad del reactor, y la columna *LP* a la potencia de este.
+Hay ciento doce columnas. Las primeras 110 se refieren a isótopos de carbono, donde *C* hace referencia al Carbono, el número después de la *C* a la cantidad de protones y neutrones en su núcleo, *U* a que es *inestable*, y *G* a que es emisor de *radiación gamma*. Por último, la columna *K* se refiere a la criticidad del reactor, y la columna *LP* a la potencia de este.
+
+El objetivo del presente análisis es resumir y visualizar la información útil de todo el conjunto de datos con una pérdida mínima de la información, ya que hacer un análisis de 112 variables sería muy complicado. Para ello primero se observará la correlación de los datos, pues **si los datos están altamente correlacionados, significa que hay redundancia y que pueden ser reducidos a un conjunto más pequeño de datos (dimensiones)**.
 
 # Análisis
 
@@ -64,7 +66,7 @@ Con esto, nos quedan 57 columnas.
 
 Con el fin de que las variables estén dentro del mismo rango (escala) y contribuyan igualmente al análisis, se someten a un proceso de estandarización.
 
-Primero, se descartan las columnas *K* y *LP* por no ser relevantes.
+Primero, se descartan las columnas *K* y *LP* por no ser relevantes en este estudio.
 
 ```{r}
 numerical_data <- datos[,0:55]
@@ -78,7 +80,7 @@ data_normalized <- scale(numerical_data)
 head(data_normalized)
 ```
 
-Debido a que ciertas columnas contenían el mismo valor en todos sus registros, el resultado de la estandarización es nulo, por lo tanto.
+Debido a que ciertas columnas contenían el mismo valor en todos sus registros, el resultado de la estandarización es nulo.
 A continuación, se identificaron datos nulos en las columnas *C11U*, *C32G*, *C82G*, *C93G* y *C98G*, por lo que no se tomarán en cuenta.
 
 ```{r}
@@ -97,7 +99,7 @@ str(data_normalized)
 
 Ya con los datos limpios y estandarizados, se muestra la matriz de correlación.
 
-```{r}
+```{r echo = FALSE}
 corr_matrix <- cor(data_normalized)
 ggcorrplot(corr_matrix) +
   theme(axis.text.x = element_text(size = 6, angle = 90),
@@ -125,17 +127,26 @@ Como se muestra en la siguiente gráfica, el primer componente contiene la máxi
 fviz_eig(datos.pca, addlabels = TRUE)
 ```
 
-De forma geométrica podemos ver que los componentes principales representan las direcciones de los datos que explican la máxima cantidad de varianza. En el caso del primer componente se aprecia que en, la gráfica las *líneas* que representatn a las variables originales tienden a agruparse en el eje *x*, correspondiente a la *dimensión 1*.
+De forma geométrica se muestra que los componentes principales representan las direcciones de los datos que explican la máxima cantidad de varianza. En el caso del primer componente se aprecia que, en la siguiente gráfica, las *líneas* que representan a las variables originales tienden a agruparse en el eje *x*, correspondiente a la *dimensión 1*.
 
 ```{r echo = FALSE}
 fviz_pca_var(datos.pca, col.var = "blacK")
 ```
 
-```{r}
-fviz_cos2(datos.pca, choice = "var", axes = 1:2)
+### Calidad de la representación
+
+Así mismo podemos ver la calidad de la representación de las variables originales en los componentes principales obtenidos, como se muestra a continuación:
+
+```{r echo = FALSE}
+fviz_cos2(datos.pca, choice = "var", axes = 1:2) +
+  theme(axis.text.x = element_text(size = 8))
 ```
 
-```{r}
+Por ejemplo, el isótopo *C98U* es bien representado en la componente principal, seguido de los isótopos *C101U* y *C92*.
+
+También podemos ver la calidad de representación de cada variable en el siguiente gráfico a través de un esquemma de colores.
+
+```{r echo = FALSE}
 fviz_pca_var(datos.pca, col.var = "cos2",
             gradient.cols = c("black", "orange", "green"),
             repel = TRUE)
