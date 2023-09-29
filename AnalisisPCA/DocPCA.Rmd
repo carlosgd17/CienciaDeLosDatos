@@ -127,11 +127,17 @@ Como se muestra en la siguiente gráfica, el primer componente contiene la máxi
 fviz_eig(datos.pca, addlabels = TRUE)
 ```
 
-De forma geométrica se muestra que los componentes principales representan las direcciones de los datos que explican la máxima cantidad de varianza. En el caso del primer componente se aprecia que, en la siguiente gráfica, las *líneas* que representan a las variables originales tienden a agruparse en el eje *x*, correspondiente a la *dimensión 1*.
+De forma geométrica se muestra que los componentes principales representan las direcciones de los datos que explican la máxima cantidad de varianza. En el caso del primer componente se aprecia que, en la siguiente gráfica:
+
+- las *líneas* que representan a las variables originales tienden a agruparse en el eje *x*, correspondiente a la *dimensión 1*.
+
+- a mayor distancia entre las variables y el origen, mejor es su representación.
 
 ```{r echo = FALSE}
 fviz_pca_var(datos.pca, col.var = "blacK")
 ```
+
+Se observa que en el eje horizontal *Dim1* muchas variables están correlacionadas, tales como *C98U*, *C108U*, *C72U*...
 
 ### Calidad de la representación
 
@@ -144,7 +150,13 @@ fviz_cos2(datos.pca, choice = "var", axes = 1:2) +
 
 Por ejemplo, el isótopo *C98U* es bien representado en la componente principal, seguido de los isótopos *C101U* y *C92*.
 
-También podemos ver la calidad de representación de cada variable en el siguiente gráfico a través de un esquemma de colores.
+Finalmente podemos ver la calidad de representación de cada variable en el siguiente gráfico a través de un esquema de colores.
+
+- Entre más verde sea el color de la variable, mejor está representada en los componentes obtenidos.
+
+- Entre más alejada esté una variable del origen, mejor será su representación.
+
+- Las variables cerca del origen son menos importantes para los primeros componentes obtenidos.
 
 ```{r echo = FALSE}
 fviz_pca_var(datos.pca, col.var = "cos2",
@@ -152,3 +164,9 @@ fviz_pca_var(datos.pca, col.var = "cos2",
             repel = TRUE)
 ```
 
+Con lo que podemos afirmar que la mayoría de las variables son bien representadas con los componentes *Dim1* y *Dim2*.
+
+# Conclusión
+
+Gracias al análisis de componentes principales aplicado se consiguió reducir la complejidad del conjunto de datos inicial y se comprobó que esta reducción representa a la mayoría de las variables iniciales.
+Obteniendo que las nuevas variables *Dim1* y *Dim2* son aptas para un posterior estudio.
