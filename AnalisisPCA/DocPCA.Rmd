@@ -1,11 +1,6 @@
 ---
-title: "Analisis PCA"
-author:
-- Carlos Garcia Diaz
-- Leonardo Cortez Gomez
-date: "`r Sys.Date()`"
 output:
-  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -14,13 +9,13 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Declaración del problema
 
+El objetivo del presente análisis es resumir y visualizar la información útil de todo el conjunto de datos con una pérdida mínima de la información, ya que hacer un análisis de 112 variables sería muy complicado. Para ello primero se observará la correlación de los datos, pues **si los datos están altamente correlacionados, significa que hay redundancia y que pueden ser reducidos a un conjunto más pequeño de datos (dimensiones)**. Después se construirán dichas dimensiones para que puedan ser usadas en un posterior análisis.
+
 ## Descripción del conjunto de datos
 
-El conjunto de datos sobre isótopos de carbono es un conjunto de datos multivariados de valor real que describe la criticidad (*K*) de un reactor y la potencia del mismo (*LP*).
+El conjunto de datos sobre isótopos de carbono es un conjunto de datos multivariados de valor real que describe la criticidad (*K*) de un reactor y la potencia de este (*LP*).
 
 Hay ciento doce columnas. Las primeras 110 se refieren a isótopos de carbono, donde *C* hace referencia al Carbono, el número después de la *C* a la cantidad de protones y neutrones en su núcleo, *U* a que es *inestable*, y *G* a que es emisor de *radiación gamma*. Por último, la columna *K* se refiere a la criticidad del reactor, y la columna *LP* a la potencia de este.
-
-El objetivo del presente análisis es resumir y visualizar la información útil de todo el conjunto de datos con una pérdida mínima de la información, ya que hacer un análisis de 112 variables sería muy complicado. Para ello primero se observará la correlación de los datos, pues **si los datos están altamente correlacionados, significa que hay redundancia y que pueden ser reducidos a un conjunto más pequeño de datos (dimensiones)**.
 
 # Análisis
 
@@ -38,8 +33,20 @@ Vista previa del conjunto de datos.
 
 ```{r}
 datos <- read_excel("dataframe_inicial.xlsx")
-str(datos)
+# str(datos)
+# Primeras 10 columnas
+head(capture.output(str(datos)), n = 10)
 ```
+
+...
+
+```{r}
+# Últimas 10 columnas
+tail(capture.output(str(datos)), n = 10)
+```
+
+
+Nota: no se muestra la estructura de todas las columnas ya que son demasiadas.
 
 ## Limpieza de los datos
 
@@ -57,8 +64,17 @@ Por otra parte, previamente se identificaron columnas con valores 0, por lo tant
 
 ```{r}
 datos = datos[, which(colSums(datos) != 0)]
-str(datos)
+# str(datos)
+# Primeras 10 columnas
+head(capture.output(str(datos)), n = 10)
 ```
+...
+
+```{r}
+# Últimas 10 columnas
+tail(capture.output(str(datos)), n = 10)
+```
+
 
 Con esto, nos quedan 57 columnas.
 
@@ -70,14 +86,24 @@ Primero, se descartan las columnas *K* y *LP* por no ser relevantes en este estu
 
 ```{r}
 numerical_data <- datos[,0:55]
-head(numerical_data)
+# str(numerical_data)
+# Primeras 10 columnas
+head(capture.output(str(numerical_data)), n = 10)
 ```
+
+...
+
+```{r}
+# Últimas 10 columnas
+tail(capture.output(str(numerical_data)), n = 10)
+```
+
 
 Se estandarizan los datos:
 
 ```{r}
 data_normalized <- scale(numerical_data)
-head(data_normalized)
+head(data_normalized, n = 3)
 ```
 
 Debido a que ciertas columnas contenían el mismo valor en todos sus registros, el resultado de la estandarización es nulo.
@@ -92,18 +118,20 @@ Una vez identificadas dichas columnas, se eliminan del conjunto de datos.
 ```{r}
 data_normalized = data_normalized[, colSums(is.na(data_normalized)) == 0]
 
-str(data_normalized)
+head(data_normalized, n = 3)
 ```
 
 ## Computar la matriz de correlación
 
-Ya con los datos limpios y estandarizados, se muestra la matriz de correlación.
+Ya con los datos limpios y estandarizados, se muestra la matriz de correlación de la *Figura 1*.
 
 ```{r echo = FALSE}
 corr_matrix <- cor(data_normalized)
 ggcorrplot(corr_matrix) +
   theme(axis.text.x = element_text(size = 6, angle = 90),
-        axis.text.y = element_text(size = 6))
+        axis.text.y = element_text(size = 6)) +
+  ggtitle("Figura 1. Matriz de correlación") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Correlación positiva o negativa.
@@ -114,43 +142,49 @@ Se "construyen" nuevas variables a partir de combinaciones lineales o mezclas de
 
 ```{r}
 datos.pca <- princomp(corr_matrix)
-str(datos.pca)
+summary(datos.pca)
 ```
 
 ```{r}
 datos.pca$loadings[, 1:2]
 ```
 
-Como se muestra en la siguiente gráfica, el primer componente contiene la máxima información posible de las variables, representándolas en hasta un 62.6%
+Como se muestra en la gráfica de la *Figura 2*, el primer componente contiene la máxima información posible de las variables, representándolas en hasta un 62.6%
 
 ```{r echo = FALSE}
-fviz_eig(datos.pca, addlabels = TRUE)
+fviz_eig(datos.pca, addlabels = TRUE) +
+  ggtitle("Figura 2. Porcentaje de representación de los principales componentes") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
-De forma geométrica se muestra que los componentes principales representan las direcciones de los datos que explican la máxima cantidad de varianza. En el caso del primer componente se aprecia que, en la siguiente gráfica:
+De forma geométrica se muestra en la *Figura 3* que los componentes principales representan las direcciones de los datos que explican la máxima cantidad de varianza. En el caso del primer componente se aprecia que, en la siguiente gráfica:
 
 - las *líneas* que representan a las variables originales tienden a agruparse en el eje *x*, correspondiente a la *dimensión 1*.
 
 - a mayor distancia entre las variables y el origen, mejor es su representación.
 
 ```{r echo = FALSE}
-fviz_pca_var(datos.pca, col.var = "blacK")
+fviz_pca_var(datos.pca, col.var = "blacK") +
+  ggtitle("Figura 3. Variables - PCA") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Se observa que en el eje horizontal *Dim1* muchas variables están correlacionadas, tales como *C98U*, *C108U*, *C72U*...
 
-### Calidad de la representación
+## Calidad de la representación
 
-Así mismo podemos ver la calidad de la representación de las variables originales en los componentes principales obtenidos, como se muestra a continuación:
+Así mismo podemos ver la calidad de la representación de las variables originales en los componentes principales obtenidos, como se muestra en la *Figura 4*.
 
 ```{r echo = FALSE}
 fviz_cos2(datos.pca, choice = "var", axes = 1:2) +
-  theme(axis.text.x = element_text(size = 8))
+  theme(axis.text.x = element_text(size = 8)) +
+  ggtitle("Figura 4. Calidad de la representación") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Por ejemplo, el isótopo *C98U* es bien representado en la componente principal, seguido de los isótopos *C101U* y *C92*.
 
-Finalmente podemos ver la calidad de representación de cada variable en el siguiente gráfico a través de un esquema de colores.
+Finalmente podemos ver la calidad de representación de cada variable en el siguiente gráfico (*Figura 5*) a través de un esquema de colores.
 
 - Entre más verde sea el color de la variable, mejor está representada en los componentes obtenidos.
 
@@ -161,12 +195,14 @@ Finalmente podemos ver la calidad de representación de cada variable en el sigu
 ```{r echo = FALSE}
 fviz_pca_var(datos.pca, col.var = "cos2",
             gradient.cols = c("black", "orange", "green"),
-            repel = TRUE)
+            repel = TRUE) +
+  ggtitle("Figura 5. Variables - PCA") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Con lo que podemos afirmar que la mayoría de las variables son bien representadas con los componentes *Dim1* y *Dim2*.
 
 # Conclusión
 
-Gracias al análisis de componentes principales aplicado se consiguió reducir la complejidad del conjunto de datos inicial y se comprobó que esta reducción representa a la mayoría de las variables iniciales.
+Gracias al análisis de componentes principales aplicado se consiguió reducir la complejidad del conjunto de datos inicial y se comprobó que esta reducción representa a la mayoría de las variables iniciales, con *Dim1* representando en hasta un 62.6% las variables originales y que la variable *C98U* es la mejor representada por *Dim1*.
 Obteniendo que las nuevas variables *Dim1* y *Dim2* son aptas para un posterior estudio.
