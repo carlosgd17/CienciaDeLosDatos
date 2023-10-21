@@ -11,6 +11,8 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 El objetivo del presente análisis es resumir y visualizar la información útil de todo el conjunto de datos con una pérdida mínima de la información, ya que hacer un análisis de 112 variables sería muy complicado. Para ello primero se observará la correlación de los datos, pues **si los datos están altamente correlacionados, significa que hay redundancia y que pueden ser reducidos a un conjunto más pequeño de datos (dimensiones)**. Después se construirán dichas dimensiones para que puedan ser usadas en un posterior análisis.
 
+Después, con un conjunto de datos más sencillo, se separará dicho conjunto en 2; unos para construir un modelo de predicción para la variable *K*, y otro para validar dicho modelo. Con esto, se espera predecir la criticidad del reactor (*K*) con base a los isótopos utilizados.
+
 ## Descripción del conjunto de datos
 
 El conjunto de datos sobre isótopos de carbono es un conjunto de datos multivariados de valor real que describe la criticidad (*K*) de un reactor y la potencia de este (*LP*).
@@ -82,7 +84,7 @@ Con esto, nos quedan 57 columnas.
 
 Con el fin de que las variables estén dentro del mismo rango (escala) y contribuyan igualmente al análisis, se someten a un proceso de estandarización.
 
-Primero, se descartan las columnas *K* y *LP* por no ser relevantes en este estudio.
+Primero, se descartan las columnas *K* y *LP* por no ser relevantes en este análisis.
 
 ```{r}
 numerical_data <- datos[,0:55]
@@ -139,11 +141,14 @@ Correlación positiva o negativa.
 ## PCA
 
 Se "construyen" nuevas variables a partir de combinaciones lineales o mezclas de las variables iniciales.
+A continuación se presenta un resúmen de las componentes genreadas.
 
 ```{r}
 datos.pca <- princomp(corr_matrix)
 summary(datos.pca)
 ```
+
+Se presentan, en detalle, las primeras 2 componentes generadas. Estas representan un mayor porcentaje de los datos originales, como se verá a continuación.
 
 ```{r}
 datos.pca$loadings[, 1:2]
@@ -153,7 +158,7 @@ Como se muestra en la gráfica de la *Figura 2*, el primer componente contiene l
 
 ```{r echo = FALSE}
 fviz_eig(datos.pca, addlabels = TRUE) +
-  ggtitle("Figura 2. Porcentaje de representación de los principales componentes") +
+  ggtitle("Figura 2. Porcentaje de representación de los componentes principales") +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
@@ -171,7 +176,7 @@ fviz_pca_var(datos.pca, col.var = "blacK") +
 
 Se observa que en el eje horizontal *Dim1* muchas variables están correlacionadas, tales como *C98U*, *C108U*, *C72U*...
 
-## Calidad de la representación
+### Calidad de la representación
 
 Así mismo podemos ver la calidad de la representación de las variables originales en los componentes principales obtenidos, como se muestra en la *Figura 4*.
 
@@ -202,7 +207,109 @@ fviz_pca_var(datos.pca, col.var = "cos2",
 
 Con lo que podemos afirmar que la mayoría de las variables son bien representadas con los componentes *Dim1* y *Dim2*.
 
-# Conclusión
+### Conclusión PCA
 
 Gracias al análisis de componentes principales aplicado se consiguió reducir la complejidad del conjunto de datos inicial y se comprobó que esta reducción representa a la mayoría de las variables iniciales, con *Dim1* representando en hasta un 62.6% las variables originales y que la variable *C98U* es la mejor representada por *Dim1*.
 Obteniendo que las nuevas variables *Dim1* y *Dim2* son aptas para un posterior estudio.
+
+
+## OverSampling
+
+Una vez reducida la complejidad del conjunto de datos al realizar el análisis PCA, se puede usar la primera componente principal obtenida (*que representa un 62.6% de las variables originales*).
+
+```{r}
+library(ROSE)
+```
+
+A continuación se muestran los registros de dicha componente.
+
+```{r}
+datos.pca$loadings[, 1]
+```
+
+```{r}
+# prop.table(table(datos.pca$loadings[, 1]))
+table(datos.pca$loadings[, 1])
+```
+
+
+
+### Grafica de distribución de clases
+
+Para apreciar de forma gráfica la distribución de clases se construye la gráfica de la *Figura 6*.
+
+```{r}
+barplot(prop.table(table(datos.pca$loadings[,1])),
+        col = rainbow(2),
+        ylim = c(0, 1),
+        main = "Figura 6. Distribución de clases")
+```
+
+Como se muestra en la *Figura 6*, los datos están balanceados, ya que cada registro es único y hace referencia a las columnas iniciales válidas (las resultantes después de la limpieza del conjunto) del conjunto de datos.
+
+## Modelo de predicción
+
+A continuación se preparan los datos que serán usados como datos de entrenamiento y de prueba, para ello se determina que el 80% de los datos se usarán para entrenar el modelo; el resto será usado para validarlo.
+
+```{r}
+library(caret)
+split <- 0.8  # porcentaje de datos al conjunto de entrenamiento
+set.seed(123)
+
+datos_modelo <- datos.pca$loadings
+
+trainIndex <- createDataPartition(datos_modelo[, 1], p = split, list = FALSE)
+```
+
+Se generan los conjuntos de entrenamiento y testeo del modelo.
+
+```{r}
+datos_train <- datos_modelo
+datos_test <- datos_modelo[-trainIndex, ]
+```
+
+### Entrenamiento
+
+Se estandarizan los datos antes de usarlos para predecir.
+
+```{r}
+k_values <- (datos[, ncol(datos) - 1] - min(datos[, ncol(datos) - 1])) / (max(datos[, ncol(datos) - 1]) - min(datos[, ncol(datos) - 1]))
+k_values <- k_values[1:50,]
+
+Comp1 <- datos_train[,1]
+
+train <- data.frame(Comp1, k_values)[1:50,]
+
+datos_ajuste <- glm(k_values ~ ., data = train, family = binomial(link = "logit"))
+
+summary(datos_ajuste)
+```
+
+Se realiza la predicción con el modelo.
+
+```{r}
+datos_predecidos <- predict(datos_ajuste, newdata = data.frame(datos_test), type = "response")
+head(datos_predecidos)
+```
+
+Para validar el modelo se genera la matriz de correlación de la *Figura 7* que compara los valores reales y los predecidos por el modelo. Podemos observar que en la mayoría de los casos hay una ffuerte correlacion, por lo que podemos asegurar que el modelo está bien entrenado.
+
+```{r echo=FALSE}
+#Testing model
+#table(k_values, datos_predecidos)
+actuals_preds <- data.frame(cbind(actuals=k_values, predicted=datos_predecidos))
+
+ggcorrplot(actuals_preds) +
+  theme(axis.text.x = element_text(size = 10, angle = 0),
+        axis.text.y = element_text(size = 10)) +
+  ggtitle("Figura 7. Matriz de correlación valores reales y predecidos") +
+  theme(plot.title = element_text(hjust = 0.8, vjust = 20))
+
+```
+
+
+# Conclusión
+
+En el presente análisis se ha disminuido la complejidad del conjunto de datos, lo que ha facilitado la creación de un modelo de predicción de la criticidad de un reactor (*K*) bajo ciertas condiciones. Así, se consiguió trabajar con una sola variable (la componente principal número 1), en vez de las 110 variables iniciales.
+Finalmente, podemos asegurar que el modelo propuesto es válido para su uso ya que los valores predecidos y los realles son muy cercanos (Véase la *Figura 7*).
+
