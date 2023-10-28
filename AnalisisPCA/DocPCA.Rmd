@@ -9,9 +9,12 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Declaración del problema
 
-El objetivo del presente análisis es resumir y visualizar la información útil de todo el conjunto de datos con una pérdida mínima de la información, ya que hacer un análisis de 112 variables sería muy complicado. Para ello primero se observará la correlación de los datos, pues **si los datos están altamente correlacionados, significa que hay redundancia y que pueden ser reducidos a un conjunto más pequeño de datos (dimensiones)**. Después se construirán dichas dimensiones para que puedan ser usadas en un posterior análisis.
+El objetivo del presente análisis es resumir y visualizar la información útil de todo el conjunto de datos con una pérdida mínima de la información, ya que hacer un análisis de 112 variables sería muy complicado. Para ello primero se observará la correlación de los datos, pues **si los datos están altamente correlacionados, significa que hay redundancia y que pueden ser reducidos a un conjunto más pequeño de datos (componentes)**. Después se construirán dichos componentes (combinaciones lineales de las variables predictoras) para que puedan ser usadas en un posterior análisis.
 
 Después, con un conjunto de datos más sencillo, se separará dicho conjunto en 2; unos para construir un modelo de predicción para la variable *K*, y otro para validar dicho modelo. Con esto, se espera predecir la criticidad del reactor (*K*) con base a los isótopos utilizados.
+
+*"Al reducir los datos a un conjunto más pequeño de predictores, seremos capaces de construir un modelo más poderoso e interpretable para predecir dichos valores".*
+
 
 ## Descripción del conjunto de datos
 
@@ -141,20 +144,20 @@ Correlación positiva o negativa.
 ## PCA
 
 Se "construyen" nuevas variables a partir de combinaciones lineales o mezclas de las variables iniciales.
-A continuación se presenta un resúmen de las componentes genreadas.
+A continuación se presenta un resumen de las componentes generadas.
 
 ```{r}
 datos.pca <- princomp(corr_matrix)
 summary(datos.pca)
 ```
 
-Se presentan, en detalle, las primeras 2 componentes generadas. Estas representan un mayor porcentaje de los datos originales, como se verá a continuación.
+Se presentan, en detalle, las primeras 4 componentes generadas. Estas representan un mayor porcentaje de los datos originales, como se verá a continuación.
 
 ```{r}
-datos.pca$loadings[, 1:2]
+datos.pca$loadings[, 1:4]
 ```
 
-Como se muestra en la gráfica de la *Figura 2*, el primer componente contiene la máxima información posible de las variables, representándolas en hasta un 62.6%
+Como se muestra en la gráfica de la *Figura 2*, el primer componente contiene la máxima información posible de las variables, representándolas en hasta un 62.6%. Así, tomando en cuenta los primeros 4 componentes principales, se consigue una representación de un 80.3% de los datos originales.
 
 ```{r echo = FALSE}
 fviz_eig(datos.pca, addlabels = TRUE) +
@@ -256,7 +259,7 @@ library(caret)
 split <- 0.8  # porcentaje de datos al conjunto de entrenamiento
 set.seed(123)
 
-datos_modelo <- datos.pca$loadings
+datos_modelo <- data.frame(datos.pca$scores[,1:4], K = datos$K[1:50], LP = datos$LP[1:50])
 
 trainIndex <- createDataPartition(datos_modelo[, 1], p = split, list = FALSE)
 ```
@@ -264,52 +267,85 @@ trainIndex <- createDataPartition(datos_modelo[, 1], p = split, list = FALSE)
 Se generan los conjuntos de entrenamiento y testeo del modelo.
 
 ```{r}
-datos_train <- datos_modelo
+datos_train <- datos_modelo[trainIndex,]
 datos_test <- datos_modelo[-trainIndex, ]
 ```
 
 ### Entrenamiento
 
-Se estandarizan los datos antes de usarlos para predecir.
+Se construyen los modelos con los datos de entrenamiento.
+
+#### Modelo de K
 
 ```{r}
-k_values <- (datos[, ncol(datos) - 1] - min(datos[, ncol(datos) - 1])) / (max(datos[, ncol(datos) - 1]) - min(datos[, ncol(datos) - 1]))
-k_values <- k_values[1:50,]
 
-Comp1 <- datos_train[,1]
+modelo_K <- lm(K ~ Comp.1 + Comp.2 + Comp.3 + Comp.4, data = datos_train)
 
-train <- data.frame(Comp1, k_values)[1:50,]
-
-datos_ajuste <- glm(k_values ~ ., data = train, family = binomial(link = "logit"))
-
-summary(datos_ajuste)
+summary(modelo_K)$coef
 ```
 
-Se realiza la predicción con el modelo.
+#### Modelo de LP
 
 ```{r}
-datos_predecidos <- predict(datos_ajuste, newdata = data.frame(datos_test), type = "response")
-head(datos_predecidos)
+modelo_LP <- lm(LP ~ Comp.1 + Comp.2 + Comp.3 + Comp.4, data = datos_train)
+
+summary(modelo_LP)$coef
 ```
 
-Para validar el modelo se genera la matriz de correlación de la *Figura 7* que compara los valores reales y los predecidos por el modelo. Podemos observar que en la mayoría de los casos hay una ffuerte correlacion, por lo que podemos asegurar que el modelo está bien entrenado.
+De los datos obtenidos de los modelos, observamos que los valores del error estándar (*Std. Error*) es cercano a 0 en las 4 componentes, lo que indica una buena confianza de dichos coeficientes.
+Además, los valores de t nos indican qué tanto afectan los cambios en una variable al modelo.
 
-```{r echo=FALSE}
-#Testing model
-#table(k_values, datos_predecidos)
-actuals_preds <- data.frame(cbind(actuals=k_values, predicted=datos_predecidos))
+### Validación de los modelos
 
-ggcorrplot(actuals_preds) +
-  theme(axis.text.x = element_text(size = 10, angle = 0),
-        axis.text.y = element_text(size = 10)) +
-  ggtitle("Figura 7. Matriz de correlación valores reales y predecidos") +
-  theme(plot.title = element_text(hjust = 0.8, vjust = 20))
+Para evaluar la exactitud del modelo se usarán los valores de Error Estándar Residual (RSE) y RMSE.
 
+#### RSE
+
+##### Modelo de K
+
+*RSE*: corresponde al error de la predicción.
+
+```{r}
+summary(modelo_K)
 ```
 
+En este modelo, su valor es de 0.015 lo que indica que hay una desviación de los valores reales de los predecidos de aproximadamente 0.015 unidades en promedio.
+
+##### Modelo de LP
+
+```{r}
+summary(modelo_LP)
+```
+
+En este modelo, su valor es de 0.173 lo que indica que hay una desviación de los valores reales de los predecidos de aproximadamente 0.173 unidades en promedio.
+
+#### RMSE
+
+Se usan los datos de testeo para evaluar el modelo y obtener el valor de RMSE (Root Mean Square Error).
+
+##### Modelo de K
+
+```{r}
+library("dplyr")
+predicciones_K <- modelo_K %>% predict(datos_test)
+
+RMSE(predicciones_K, datos_test$K)
+```
+
+
+##### Modelo de LP
+
+```{r}
+predicciones_LP <- modelo_LP %>% predict(datos_test)
+
+RMSE(predicciones_LP, datos_test$LP)
+```
+
+
+Entre más bajo sea este valor, mejor será el modelo, por lo que podemos decir que los modelos están bien entrenados.
 
 # Conclusión
 
 En el presente análisis se ha disminuido la complejidad del conjunto de datos, lo que ha facilitado la creación de un modelo de predicción de la criticidad de un reactor (*K*) bajo ciertas condiciones. Así, se consiguió trabajar con una sola variable (la componente principal número 1), en vez de las 110 variables iniciales.
-Finalmente, podemos asegurar que el modelo propuesto es válido para su uso ya que los valores predecidos y los realles son muy cercanos (Véase la *Figura 7*).
+Finalmente, podemos asegurar que los modelos propuestos son válidos para su uso ya que los valores de RMSE y RSE así lo indican.
 
